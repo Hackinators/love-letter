@@ -45,14 +45,154 @@ module.exports = {
     return game;
   },
 
-  removeTurn: function(game, i) {
+  removeTurn: function(game, targetIndex, userIndex) {
+    var before = false;
+
     for (var j = 0; j < game.turnOrder.length; j++) {
-      if (i === game.turnOrder[j]) {
+      // See if target comes before user or is equal to user
+      if (userIndex === game.turnOrder[j]) before = true;
+
+      // Remove Player
+      if (targetIndex === game.turnOrder[j]) {
         game.turnOrder.splice(j, 1);
+
+        if (before) game.currentTurn--;
       }
     }
 
     return game;
+  },
+
+  nextTurn: function(game) {
+    if (game.currentTurn >= game.turnOrder.length - 1) game.currentTurn = 0;
+    else game.currentTurn++;
+
+    game.players[game.turnOrder[game.currentTurn]].hand.push(game.deck.splice(0, 1)[0]);
+
+    return game;
+  },
+
+  newRound: function(game) {
+    // Reset Variables
+    game.turnOrder = game.constTurnOrder.map(function(item){return item;});
+    game.round++;
+    game.extraCard = null;
+
+    // Choose who starts the next round based on round winner
+    for (var i = 0; i < game.players.length; i++) {
+      // Clear Hand
+      game.players[i].hand = [];
+      game.players[i].deck = [];
+
+      // Find Round Winner
+      if (game.roundWinner === game.players[i].player) {
+
+        // Find player in turnOrder
+        for (var j = 0; j < game.turnOrder.length; j++) {
+          if (game.turnOrder[j] === i) {
+
+            // Set Current Turn to next player
+            if (j >= game.turnOrder.length) game.currentTurn = 0;
+            else game.currentTurn = j + 1;
+          }
+        }
+      }
+    }
+
+    // Shuffle Deck
+    var deck = this.shuffleCards(game.theme);
+
+    // Deal Cards
+    game = this.dealCards(game);
+
+    // Return Game for New Round
+    return game;
+  },
+
+  checkForRoundWin: function(game) {
+    // Check if one player is left
+    if (game.turnOrder.length === 1) {
+      game.roundWinner = game.players[game.turnOrder[0]].player;
+      game.players[game.turnOrder[0]].vp++;
+      return game
+    }
+
+    // Check to see if deck is gone
+    else if (game.deck.length < 1) {
+      var highest = [{
+        player: game.players[game.turnOrder[0]].player,
+        power: game.players[game.turnOrder[0]].hand[0].power,
+        index: game.turnOrder[0],
+        total: this.calculateHandTotal(game.players[game.turnOrder[0]])
+      }];
+
+      // Find who is the Highest
+      for (var i = 1; i < game.turnOrder.length; i++) {
+        var currentPlayer = game.players[game.turnOrder[i]];
+        var handPower = currentPlayer.hand[0].power;
+
+        if (handPower > highest[0].power)
+          highest = [{
+            player: currentPlayer.player,
+            power: handPower,
+            index: game.turnOrder[i],
+            total: this.calculateHandTotal(currentPlayer)
+          }];
+        else if (handPower === highest[0].power)
+          highest.push({
+            player: currentPlayer.player,
+            power: handPower,
+            index: game.turnOrder[i],
+            total: this.calculateHandTotal(currentPlayer)
+          });
+      }
+
+      // If only one player, Return Game
+      if (highest.length === 1) {
+        game.roundWinner = highest[0].player;
+        game.players[highest[0].index].vp++;
+        return game
+      }
+
+      // If there is a tie, compare hands and return game
+      else {
+        var winner = highest[0];
+
+        for (var i = 1; i < highest.length; i++) {
+          if (highest[i].total > winner.total)
+            winner = highest[i];
+
+          // If there is a tie, return 'tie'
+          else if (highest[i].total === winner.total);
+          return 'tie';
+        }
+
+        // Return winner
+        game.roundWinner = winner.player;
+        game.players[winner.index].vp++;
+        return game
+      }
+    }
+
+    // Return nothing if no round win
+    else return null;
+  },
+
+  calculateHandTotal: function(player) {
+    var total = player.hand[0].power;
+
+    for (var i = 0; i < array.length; i++) {
+      total += player.discard[i].power;
+    }
+
+    return total
+  };
+
+  checkForGameWin: function(game) {
+    for (var i = 0; i < game.players.length; i++) {
+      if (game.players[i].vp === game.maxVp) return game.players[i];
+    }
+    return null;
   },
 
   makeGame: function(players, theme) {

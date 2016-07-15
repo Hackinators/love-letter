@@ -73,6 +73,12 @@ app.put('/user/friend/remove/:friendId', userCtrl.removeFriend);
 app.put('/user/win/', userCtrl.addWin);
 app.put('/user/loss/', userCtrl.addLoss);
 
+// LOBY ENDPOINTS
+app.get('/loby', lobyController.read);
+app.post('/loby', lobyController.create);
+app.put('/loby/:id', lobyController.update);
+app.delete('/loby/:id', lobyController.delete);
+
 // VARIABLES
 // ============================================================
 var port = config.port;
