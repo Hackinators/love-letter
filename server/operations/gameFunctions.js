@@ -1,4 +1,7 @@
-var StarWars = require('./../decks/star_wars'),
+var decks = {
+  StarWars: require('./../decks/star_wars'),
+  Hobbit
+};
     Hobbit = require('./../decks/hobbit');
 
 module.exports = {
