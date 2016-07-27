@@ -1,8 +1,7 @@
 var decks = {
-  StarWars: require('./../decks/star_wars'),
-  Hobbit
+  'Star Wars': require('./../decks/star_wars'),
+  'Hobbit': require('./../decks/hobbit')
 };
-    Hobbit = require('./../decks/hobbit');
 
 module.exports = {
 
@@ -15,7 +14,7 @@ module.exports = {
     var newPlayers = [];
     var playersLength = players.length;
 
-    for (var i = 0; i < playersLength; i++) {
+    for (var j = 0; j < playersLength; j++) {
       newPlayers.push(players.splice(Math.floor(Math.random() * players.length), 1)[0]);
     }
 
@@ -23,12 +22,7 @@ module.exports = {
   },
 
   shuffleCards: function(theme) {
-    if (theme === 'Star Wars') var deck = StarWars.map(function(item) {
-      return item;
-    });
-    if (theme === 'Hobbit') var deck = Hobbit.map(function(item) {
-      return item;
-    });
+    var deck = decks[theme].map(function(item){return item;});
 
     var newDeck = [];
     var deckLength = deck.length;
@@ -117,7 +111,7 @@ module.exports = {
     if (game.turnOrder.length === 1) {
       game.roundWinner = game.players[game.turnOrder[0]].player;
       game.players[game.turnOrder[0]].vp++;
-      return game
+      return game;
     }
 
     // Check to see if deck is gone
@@ -154,26 +148,26 @@ module.exports = {
       if (highest.length === 1) {
         game.roundWinner = highest[0].player;
         game.players[highest[0].index].vp++;
-        return game
+        return game;
       }
 
       // If there is a tie, compare hands and return game
       else {
         var winner = highest[0];
 
-        for (var i = 1; i < highest.length; i++) {
-          if (highest[i].total > winner.total)
-            winner = highest[i];
+        for (var j = 1; j < highest.length; j++) {
+          if (highest[j].total > winner.total)
+            winner = highest[j];
 
           // If there is a tie, return 'tie'
-          else if (highest[i].total === winner.total);
+          else if (highest[j].total === winner.total);
           return 'tie';
         }
 
         // Return winner
         game.roundWinner = winner.player;
         game.players[winner.index].vp++;
-        return game
+        return game;
       }
     }
 
@@ -188,8 +182,8 @@ module.exports = {
       total += player.discard[i].power;
     }
 
-    return total
-  };
+    return total;
+  },
 
   checkForGameWin: function(game) {
     for (var i = 0; i < game.players.length; i++) {
@@ -210,7 +204,7 @@ module.exports = {
         vp: 0,
         hand: [],
         discard: []
-      })
+      });
     }
 
     if (game.playerCount === 2) game.maxVp = 7;

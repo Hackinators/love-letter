@@ -1,0 +1,36 @@
+<div class="card">
+  <div class="cardHeader">
+    <div class="cardPower">
+      {{card.power}}
+      <!-- <span class="numberOfCards" ng-show="card.totalCards===1">
+        <div class="pip middle"></div>
+      </span> -->
+      <span class="numberOfCards" ng-show="card.totalCards===2">
+        <div class="pip midLeft"></div>
+        <div class="pip midRight"></div>
+      </span>
+      <span class="numberOfCards" ng-show="card.totalCards===5">
+        <div class="pip middle"></div>
+        <div class="pip topLeft"></div>
+        <div class="pip bottomRight"></div>
+        <div class="pip topRight"></div>
+        <div class="pip bottomLeft"></div>
+      </span>
+    </div>
+    <div class="cardName">
+      {{card.name}}
+    </div>
+  </div>
+  <div class="cardPicture">
+    <img src="{{card.image}}" alt="" />
+  </div>
+  <div class="cardDescription">
+    {{card.description}}
+  </div>
+  <div class="cardFlavorText">
+    {{card.flavorText}}
+  </div>
+</div>
+<div class="playButton" ng-show="inCurrentPlayersHand">
+  <button type="button" name="button" ng-click="run(card.run)">Play Card</button>
+</div>

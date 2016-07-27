@@ -2,28 +2,37 @@
 // ============================================================
 var config = require('./config');
 
+
+
 // REQUIRE DEPENDENCIES
 // ============================================================
 var express = require('express');
 var cors = require('cors');
 var bodyParser = require('body-parser');
+var mongoose = require('mongoose');
+var sharedsession = require('express-socket.io-session');
 var session = require('express-session')({
   secret: config.session_secret,
   saveUninitialized: true,
   resave: true
 });
-var mongoose = require('mongoose');
-var sharedsession = require('express-socket.io-session')
+
+
 
 // CONTROLLERS
 // ============================================================
 var userCtrl = require('./controllers/userController');
 var gameCtrl = require('./controllers/gameController');
+var lobbyCtrl = require('./controllers/lobbyController');
 var passport = require('./services/passport');
+
+
 
 // INITILIZE APP
 // ============================================================
 var app = express();
+
+
 
 // INITILIZE DEPENDENCIES
 // ============================================================
@@ -31,12 +40,26 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(__dirname + './../test'));
 
+
+
+// SOCKET
+// ============================================================
+var server = require('http').createServer(app);
+var io = require('socket.io').listen(server);
+io.use(sharedsession(session));
+
+var gameSockets = require('./controllers/gameSockets')(io);
+
+
+
 // MIDDLEWARE
 // ============================================================
 var isAuthed = function(req, res, next) {
   if (!req.isAuthenticated()) return res.status(401).send();
   return next();
 };
+
+
 
 // PASSPORT
 // ============================================================
@@ -52,14 +75,7 @@ app.get('/logout', function(req, res, next) {
   return res.status(200).send('logged out');
 });
 
-// SOCKET
-// ============================================================
-var server = require('http').createServer(app)
-var io = require('socket.io').listen(server);
 
-io.use(sharedsession(session));
-
-io.on('connection', gameCtrl);
 
 // ENDPOINTS
 // ============================================================
@@ -74,15 +90,27 @@ app.put('/user/win/', userCtrl.addWin);
 app.put('/user/loss/', userCtrl.addLoss);
 
 // LOBY ENDPOINTS
-app.get('/loby', lobyController.read);
-app.post('/loby', lobyController.create);
-app.put('/loby/:id', lobyController.update);
-app.delete('/loby/:id', lobyController.delete);
+app.get('/lobby', lobbyCtrl.read);
+app.post('/lobby', lobbyCtrl.create);
+app.put('/lobby/:id', lobbyCtrl.update);
+app.delete('/lobby/:id', lobbyCtrl.delete);
+app.put('/lobby/player/add/:id/:playerId', lobbyCtrl.addPlayer);
+app.put('/lobby/player/remove/:id/:playerId', lobbyCtrl.removePlayer);
+
+// GAME ENDPOINTS
+app.get('/game', gameCtrl.read);
+app.post('/game', gameCtrl.create);
+app.put('/game/:id', gameCtrl.update);
+app.delete('/game/:id', gameCtrl.delete);
+
+
 
 // VARIABLES
 // ============================================================
 var port = config.port;
 var mongoURI = config.mongo_URI;
+
+
 
 // MONGO CONNECTION
 // ============================================================
@@ -92,8 +120,10 @@ mongoose.connection.once('open', function() {
   console.log('Connected to mongo at: ', mongoURI);
 });
 
+
+
 // LISTEN
 // ============================================================
 server.listen(port, function() {
   console.log('listening on port ', port);
-})
+});

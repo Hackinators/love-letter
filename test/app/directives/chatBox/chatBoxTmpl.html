@@ -1,0 +1,40 @@
+<div class="chatBox" ng-class="{showChat: showChat}">
+  <div class="chatBoxHead">
+    Group Chat
+    <span ng-click="showChat=!showChat"
+          class="closeChat"
+          ng-show="showChat">
+      <i class="fa fa-times" aria-hidden="true"></i>
+    </span>
+  </div>
+  <div class="display" scroll-glue>
+    <div ng-repeat="message in chat.messages">
+      <span class="date">{{message.created | date: 'shortTime'}}</span>
+      <span>{{message.player}}:</span>
+      <br>
+      {{message.message}}
+
+    </div>
+  </div>
+  <form class="input" ng-submit="sendMessage(chatInput)">
+    <input type="text"
+           id="chatInput"
+           ng-model="chatInput"
+           placeholder="{{placeholder}}"
+           ng-focus="placeholder=''"
+           ng-blur="placeholder='Input Message...'">
+    <button type="submit"
+            id="chatButton"
+            name="send">
+
+            Send <i class="fa fa-paper-plane" aria-hidden="true"></i>
+    </button>
+  </form>
+</div>
+
+<div class="miniChat" ng-class="{hideChat: showChat}">
+  <i class="fa fa-comments"
+     aria-hidden="true"
+     id="miniChatButton"
+     ng-click="showChat=!showChat"></i>
+</div>

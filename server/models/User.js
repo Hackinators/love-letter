@@ -12,7 +12,7 @@ var User = mongoose.Schema({
     first: {type: String, require: true},
     last: {type: String, require: true}
   },
-  userName: {type: String, require: true},
+  username: {type: String, require: true},
   email: {type: String, index: true, trim: true, required: true},
   password: {type: String, required: true},
   joined: {type: Date, default: new Date()},

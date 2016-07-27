@@ -22,11 +22,7 @@ var gameSchema = mongoose.Schema({
   turnOrder: [{type: Number}],
   currentTurn: {type: Number, default: 0},
   roundWinner: {type: obj, ref: 'User'},
-  chat:[{
-    player: {type: String},
-    message: {type: String},
-    created: {type: Date, default: new Date()}
-  }],
+  chat: {type: obj, ref: 'Chat'},
   extraCard: Card,
   deck: [Card],
   theme: {type: String, default: 'Star Wars', enum: ['Star Wars', 'Hobbit']}

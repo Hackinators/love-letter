@@ -4,15 +4,14 @@ var mongoose = require('mongoose');
 
 // DEFINE SCHEMA
 // ============================================================
-var lobySchema = mongoose.Schema({
-  players: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
-  chat: [{
+var chatSchema = mongoose.Schema({
+  messages: [{
     player: {type: String},
     message: {type: String},
-    created: {type: Date, default: new Date()}
+    created: {type: Date}
   }]
 });
 
 // EXPORT SCHEMA
 // ============================================================
-module.exports = mongoose.model('Model', lobySchema);
+module.exports = mongoose.model('Chat', chatSchema);

@@ -1,25 +1,23 @@
-angular.module("app").controller("profileCtrl", function($scope, user) {
+// INITILIZE CONTROLLER
+// ============================================================
+angular.module("app").controller("profileCtrl", function($scope, user, lobbyService, $state) {
+
+  // VARIABLES
+  // ============================================================
   $scope.user = user;
 
-  var socket = io();
-  $scope.socket = socket;
 
-  socket.emit('create', ['5782d42dff790ad01f9eff45', '5782d584ff790ad01f9eff46']);
+  // FUNCTIONS
+  // ============================================================
+  $scope.createLobby = function() {
+    var players = user.friends;
+    players.push(user._id);
+    lobbyService.createLobby({
+      players: players
+    }).then(function(response) {
+      $state.go('lobby', {id: response.data._id});
+      return;
+    });
+  };
 
-  socket.on('error', function(thing) {
-    console.log(thing);
-
-  });
-
-  socket.on('game', function(game) {
-    $scope.game = game;
-    console.log(game);
-    $scope.$apply();
-  });
-
-  $scope.run = function(func) {
-    var myFunc = eval('('+func+')');
-
-    myFunc($scope.game._id, 0, $scope.game.players[0].player, 'Obi-Wan');
-  }
 });

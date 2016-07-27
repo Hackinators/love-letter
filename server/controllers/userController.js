@@ -42,13 +42,13 @@ module.exports = {
     },
 
     addFriend: function(req, res, next) {
-        User.findByIdAndUpdate(req.user._id, {$push: {"friends": req.params.friendId}}, {new: true})
-            .exec(function(err, user) {
-                if (err) {
-                    res.status(500).send(err);
-                }
-                res.status(200).send(user);
-            })
+      User.findByIdAndUpdate(req.user._id, {$push: {"friends": req.params.friendId}}, {new: true})
+          .exec(function(err, user) {
+              if (err) {
+                  res.status(500).send(err);
+              }
+              res.status(200).send(user);
+          });
     },
     removeFriend: function(req, res, next) {
       User.findByIdAndUpdate(req.user._id, {$pull: {"friends": req.params.friendId}}, {new: true, safe: true})
@@ -57,7 +57,7 @@ module.exports = {
                   res.status(500).send(err);
               }
               res.status(200).send(user);
-          })
+          });
     },
 
     addWin: function(req, res, next) {
@@ -67,7 +67,7 @@ module.exports = {
                   res.status(500).send(err);
               }
               res.status(200).send(user);
-          })
+          });
     },
     addLoss: function(req, res, next) {
       User.findByIdAndUpdate(req.user._id, {$inc: {'losses': 1}}, {new: true})
@@ -76,6 +76,6 @@ module.exports = {
                   res.status(500).send(err);
               }
               res.status(200).send(user);
-          })
+          });
     }
 };

@@ -1,15 +1,4 @@
 <nav-dir></nav-dir>
 <br><br><br><br>
 
-<button ng-click="run(game.deck[0].run)">Run</button>
-
-<div ng-repeat="card in game.deck">
-  <img style="height: 100px; width: 100px;" src="{{card.image}}" />Deck
-</div>
-<div ng-repeat="player in game.players">
-  <div ng-repeat="card in player.hand">
-    <img style="height: 100px; width: 100px;" src="{{card.image}}" />Player
-  </div>
-</div>
-
-<img style="height: 100px; width: 100px;" src="{{game.extraCard.image}}" />Extra
+<button ng-click="createLobby()">Create Lobby</button>
