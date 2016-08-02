@@ -39,3 +39,4 @@ jspm_packages
 config.js
 bundle.js
 style.css
+bower_components
