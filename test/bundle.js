@@ -259,6 +259,65 @@ angular.module("app").service("userService", ["$http", function ($http) {
 }]);
 // INITILIZE CONTROLLER
 // ============================================================
+angular.module("app").controller("cardCtrl", ["$scope", function ($scope) {
+
+	// VARIABLES
+	// ============================================================
+	var socket = $scope.socket;
+
+	// FUNCTIONS
+	// ============================================================
+	$scope.run = function (func) {
+		var myFunc = eval('(' + func + ')');
+
+		myFunc($scope.game._id, 0, $scope.game.players[0].player, 'Obi-Wan');
+	};
+}]);
+// INITILIZE DIRECTIVE
+// ============================================================
+angular.module("app").directive('cardDir', function () {
+	return {
+		restrict: 'EA',
+		templateUrl: './app/directives/card/cardTmpl.html',
+		controller: 'cardCtrl',
+		scope: {
+			socket: '=',
+			card: '='
+		}
+	};
+});
+angular.module("app").controller("navCtrl", ["$scope", "authService", "$state", function ($scope, authService, $state) {
+  $scope.logout = function () {
+    authService.logout().then(function (response) {
+      $state.go('login');
+    });
+  };
+}]);
+angular.module('app').directive('navDir', function () {
+  return {
+    restrict: 'EA',
+    templateUrl: './app/directives/nav/navTmpl.html',
+    controller: 'navCtrl'
+  };
+});
+// INITILIZE DIRECTIVE
+// ============================================================
+angular.module("app").directive('opponent', function () {
+	return {
+		restrict: 'EA',
+		templateUrl: './app/directives/opponent/opponentTmpl.html'
+	};
+});
+// INITILIZE DIRECTIVE
+// ============================================================
+angular.module("app").directive('player', function () {
+	return {
+		restrict: 'EA',
+		templateUrl: './app/directives/player/playerTmpl.html'
+	};
+});
+// INITILIZE CONTROLLER
+// ============================================================
 angular.module("app").controller("gameCtrl", ["$scope", "user", "game", function ($scope, user, game) {
 
 	// VARIABLES
@@ -318,6 +377,13 @@ angular.module("app").controller("gameCtrl", ["$scope", "user", "game", function
 	// ============================================================
 	$scope.opponentFilter = function (player) {
 		if (player.player._id !== user._id) {
+			return player;
+		}
+		return false;
+	};
+
+	$scope.playerFilter = function (player) {
+		if (player.player._id === user._id) {
 			return player;
 		}
 		return false;
@@ -410,57 +476,6 @@ angular.module("app").controller("loginCtrl", ["$scope", "authService", "$state"
 }]);
 // INITILIZE CONTROLLER
 // ============================================================
-angular.module("app").controller("profileCtrl", ["$scope", "user", "lobbyService", "$state", function ($scope, user, lobbyService, $state) {
-
-  // VARIABLES
-  // ============================================================
-  $scope.user = user;
-
-  // FUNCTIONS
-  // ============================================================
-  $scope.createLobby = function () {
-    var players = user.friends;
-    players.push(user._id);
-    lobbyService.createLobby({
-      players: players
-    }).then(function (response) {
-      $state.go('lobby', { id: response.data._id });
-      return;
-    });
-  };
-}]);
-// INITILIZE CONTROLLER
-// ============================================================
-angular.module("app").controller("cardCtrl", ["$scope", function ($scope) {
-
-  // VARIABLES
-  // ============================================================
-  var socket = $scope.socket;
-
-  // FUNCTIONS
-  // ============================================================
-  $scope.run = function (func) {
-    var myFunc = eval('(' + func + ')');
-
-    myFunc($scope.game._id, 0, $scope.game.players[0].player, 'Obi-Wan');
-  };
-}]);
-// INITILIZE DIRECTIVE
-// ============================================================
-angular.module("app").directive('cardDir', function () {
-  return {
-    restrict: 'EA',
-    templateUrl: './app/directives/card/cardTmpl.html',
-    controller: 'cardCtrl',
-    scope: {
-      socket: '=',
-      inCurrentPlayersHand: '=',
-      card: '='
-    }
-  };
-});
-// INITILIZE CONTROLLER
-// ============================================================
 angular.module("app").controller("chatBoxCtrl", ["$scope", function ($scope) {
 
   // VARIABLES
@@ -493,29 +508,36 @@ angular.module("app").controller("chatBoxCtrl", ["$scope", function ($scope) {
 }]);
 // INITILIZE DIRECTIVE
 // ============================================================
-angular.module("app").directive('chatboxDir', function () {
-  return {
-    restrict: 'EA',
-    templateUrl: './app/directives/chatBox/chatBoxTmpl.html',
-    controller: 'chatBoxCtrl',
-    scope: {
-      socket: '=',
-      chatId: '=',
-      username: '='
-    }
-  };
+angular.module("app").directive('chatbox', function () {
+	return {
+		restrict: 'EA',
+		templateUrl: './app/directives/chatBox/chatBoxTmpl.html',
+		controller: 'chatBoxCtrl',
+		scope: {
+			socket: '=',
+			chatId: '=',
+			username: '='
+		}
+	};
 });
-angular.module("app").controller("navCtrl", ["$scope", "authService", "$state", function ($scope, authService, $state) {
-  $scope.logout = function () {
-    authService.logout().then(function (response) {
-      $state.go('login');
+// INITILIZE CONTROLLER
+// ============================================================
+angular.module("app").controller("profileCtrl", ["$scope", "user", "lobbyService", "$state", function ($scope, user, lobbyService, $state) {
+
+  // VARIABLES
+  // ============================================================
+  $scope.user = user;
+
+  // FUNCTIONS
+  // ============================================================
+  $scope.createLobby = function () {
+    var players = user.friends;
+    players.push(user._id);
+    lobbyService.createLobby({
+      players: players
+    }).then(function (response) {
+      $state.go('lobby', { id: response.data._id });
+      return;
     });
   };
 }]);
-angular.module('app').directive('navDir', function () {
-  return {
-    restrict: 'EA',
-    templateUrl: './app/directives/nav/navTmpl.html',
-    controller: 'navCtrl'
-  };
-});

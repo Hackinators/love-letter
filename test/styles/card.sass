@@ -1,100 +1,127 @@
 $powerSize: 2em
 
 .card
-  height: 300px
-  width: 200px
-  background-color: gray
-  padding: 10px
-  border-radius: 10px
-  position: relative
+    position: relative
 
-  .cardHeader
-    height: 32.5px
-    .cardName
-      display: inline-block
-      vertical-align: top
 
-    .cardPower
-      background-color: black
-      border-radius: 100px
-      font-size: $powerSize
-      width: 65px
-      height: 65px
-      color: white
-      text-align: center
-      line-height: $powerSize
-      position: relative
-      display: inline-block
+    width: 200px
+    height: 300px
+    padding: 10px
 
-      span
+
+    border-radius: 10px
+    background-color: gray
+
+    .cardHeader
+        height: 32.5px
+        .cardName
+            display: inline-block
+
+
+            vertical-align: top
+
+        .cardPower
+            font-size: $powerSize
+            line-height: $powerSize
+
+
+            position: relative
+
+
+            display: inline-block
+
+
+            width: 65px
+            height: 65px
+
+
+            text-align: center
+
+
+            color: white
+            border-radius: 100px
+            background-color: black
+
+            span
+                position: absolute
+                bottom: -10px
+                left: 0
+
+
+                width: 30px
+                height: 30px
+
+
+                border: 1px solid yellow
+                border-radius: 100px
+                background-color: gray
+
+                .pip
+                    width: 3px
+                    height: 3px
+
+
+                    border-radius: 100px
+                    background-color: white
+
+                .topLeft
+                    position: absolute
+                    top: calc(25% - 1.5px)
+                    left: calc(25% - 1.5px)
+
+                .topRight
+                    position: absolute
+                    top: calc(25% - 1.5px)
+                    left: calc(75% - 1.5px)
+
+                .middle
+                    position: absolute
+                    top: calc(50% - 1.5px)
+                    left: calc(50% - 1.5px)
+
+                .bottomLeft
+                    position: absolute
+                    top: calc(75% - 1.5px)
+                    left: calc(25% - 1.5px)
+
+                .bottomRight
+                    position: absolute
+                    top: calc(75% - 1.5px)
+                    left: calc(75% - 1.5px)
+
+                .midLeft
+                    position: absolute
+                    top: calc(33.33% - 1.5px)
+                    left: calc(33.33% - 1.5px)
+
+                .midRight
+                    position: absolute
+                    top: calc(66.66% - 1.5px)
+                    left: calc(66.66% - 1.5px)
+
+    .cardPicture
+        width: calc(100% + 20px)
+        height: 100px
+        margin-left: -10px
+
+        img
+            width: 100%
+            height: 100%
+
+    .cardDescription
+        text-align: center
+
+    .cardFlavorText
         position: absolute
-        bottom: -10px
+        bottom: 0
         left: 0
-        background-color: gray
-        border: 1px solid yellow
-        border-radius: 100px
-        height: 30px
-        width: 30px
 
-        .pip
-          height: 3px
-          width: 3px
-          border-radius: 100px
-          background-color: white
 
-        .topLeft
-          position: absolute
-          top: calc(25% - 1.5px)
-          left: calc(25% - 1.5px)
+        width: 100%
 
-        .topRight
-          position: absolute
-          top: calc(25% - 1.5px)
-          left: calc(75% - 1.5px)
 
-        .middle
-          position: absolute
-          top: calc(50% - 1.5px)
-          left: calc(50% - 1.5px)
-
-        .bottomLeft
-          position: absolute
-          top: calc(75% - 1.5px)
-          left: calc(25% - 1.5px)
-
-        .bottomRight
-          position: absolute
-          top: calc(75% - 1.5px)
-          left: calc(75% - 1.5px)
-
-        .midLeft
-          position: absolute
-          top: calc(33.33% - 1.5px)
-          left: calc(33.33% - 1.5px)
-
-        .midRight
-          position: absolute
-          top: calc(66.66% - 1.5px)
-          left: calc(66.66% - 1.5px)
-
-  .cardPicture
-    height: 100px
-    width: calc(100% + 20px)
-    margin-left: -10px
-
-    img
-      height: 100%
-      width: 100%
-
-  .cardDescription
-    text-align: center
-
-  .cardFlavorText
-    position: absolute
-    bottom: 0
-    left: 0
-    width: 100%
-    text-align: center
+        text-align: center
 
 .playButton
-  background-color: red
+    button
+        background-color: red

@@ -7,6 +7,8 @@ var Game = require('../models/Game'),
 module.exports = function(io) {
 	io.sockets.on('connection', function(socket) {
 
+		// ROOM
+		// ============================================================
 		var RoomId;
 
 		// JOIN ROOM
@@ -20,6 +22,8 @@ module.exports = function(io) {
 			socket.leave(roomId);
 		});
 
+		// CHAT
+		// ============================================================
 		// GET CHAT
 		socket.on('getChat', function() {
 			Chat.findById(RoomId, function(err, chat) {
@@ -28,7 +32,7 @@ module.exports = function(io) {
 				io.sockets.in(RoomId)
 					.emit('chat', chat);
 			});
-		});
+		}); // End getChat
 
 		// CHAT
 		socket.on('chat', function(chatId, message) {
@@ -45,8 +49,10 @@ module.exports = function(io) {
 					io.sockets.in(RoomId)
 						.emit('chat', chat);
 				});
-		});
+		}); // End chat
 
+		// GAME SETUP
+		// ============================================================
 		// MAKE GAME
 		socket.on('create', function(players, chat) {
 			var game = new Game(gameFunctions.makeGame(players, 'Star Wars'));
@@ -60,9 +66,9 @@ module.exports = function(io) {
 				return io.sockets.in(RoomId)
 					.emit('newGame', game);
 			});
-		});
+		}); // End create
 
-		// New Round
+		// NEW ROUND
 		socket.on('newRound', function(gameId) {
 			Game.findById(gameId, function(err, game) {
 				if (err) return io.sockets.in(RoomId)
@@ -71,7 +77,10 @@ module.exports = function(io) {
 				game = gameFunctions.newRound(game);
 
 				game.save(function(err, game) {
+					if (err) return io.sockets.in(RoomId)
+						.emit('err', err);
 
+					// Populate players
 					game.populate('players.player', function(err, game) {
 						// Error
 						if (err) return io.sockets.in(RoomId)
@@ -79,714 +88,266 @@ module.exports = function(io) {
 
 						// Return Game if No Win
 						return io.sockets.in(RoomId)
-							.emit('game', game);
+							.emit('gameNewRound', game);
 					});
 				});
 			});
-		});
+		}); // End newRound
 
-		// CARD ZERO
-		socket.on('zero', function(gameId, cardIndex) {
-			var userId = socket.handshake.session.passport.user;
-
-			Game.findOne({
-					_id: gameId
-				})
+		// DRAW CARD
+		// ============================================================
+		socket.on('drawCard', function(gameId) {
+			Game.findById(gameId)
 				.exec(function(err, game) {
 					if (err) return io.sockets.in(RoomId)
 						.emit('err', err);
 
-					for (var i = 0; i < game.players.length; i++) {
-						// Find Current Player
-						if (game.players[i].player + '' === userId) {
-							// Remove Protection
-							game.players[i].protected = false;
+					// Variables
+					var userIndex = game.turnOrder[game.currentTurn];
 
-							// Put Card in Discard
-							game.players[i].discard.push(game.players[i].hand.splice(cardIndex, 1)[0]);
-						}
-					}
+					// Draw Card
+					game.players[userIndex].hand.push(game.deck.splice(0, 1));
 
-					// Check For Round Winner
-					var roundWin = false;
-					var round = gameFunctions.checkForRoundWin(game);
+					game.save(function() {
+						if (err) return io.sockets.in(RoomId)
+							.emit('err', err);
 
-					// If Tie, Set round win to true, but dont change anything.
-					if (round === 'tie') roundWin = true;
-					// If Clear Winner, Set round win and update game
-					else if (round) {
-						game = round;
-						roundWin = true;
-					}
-
-					// Check For Game Win
-					var gameWin = gameFunctions.checkForGameWin(game);
-
-					game.save(function(err, game) {
-
+						// Populate players
 						game.populate('players.player', function(err, game) {
 							// Error
 							if (err) return io.sockets.in(RoomId)
 								.emit('err', err);
 
-							// If Game Win
-							if (gameWin) return io.sockets.in(RoomId)
-								.emit('win', game, gameWin);
-
-							// If Round Win
-							if (roundWin) return io.sockets.in(RoomId)
-								.emit('roundWin', game);
-
-							// Return Game if No Win
+							// Return Game
 							return io.sockets.in(RoomId)
-								.emit('game', game);
+								.emit('gameDrewCard', game);
 						});
 					});
 				});
-		});
+		}); // End drawCard
 
-		// CARD ONE
-		socket.on('one', function(gameId, cardIndex, targetPlayer, guess) {
-			var userId = socket.handshake.session.passport.user;
-
-			Game.findOne({
-					_id: gameId
-				})
+		// PLAY CARD
+		// ============================================================
+		socket.on('playCard', function(gameId, cardIndex, targetPlayer, guess) {
+			Game.findById(gameId)
 				.exec(function(err, game) {
 					if (err) return io.sockets.in(RoomId)
 						.emit('err', err);
 
-					var userIndex;
+					// Indexes
+					var userIndex = game.turnOrder[game.currentTurn];
+					var targetIndex;
 
-					// Find Current Player
-					for (var i = 0; i < game.players.length; i++) {
-						if (game.players[i].player + '' === userId) {
-							// Remove Protection
-							game.players[i].protected = false;
+					// Get Target Player If One Exists
+					if (targetPlayer)
+						targetIndex = gameFunctions.getTargetIndex(game, targetPlayer);
 
-							// Put Card in Discard
-							game.players[i].discard.push(game.players[i].hand.splice(cardIndex, 1)[0]);
+					// Put Card in Players Discard and Get Power
+					var power = game.players[userIndex].hand[cardIndex].testPower;
 
-							// Set User Index
-							userIndex = i;
-						}
-					}
+					game.players[userIndex].discard
+						.push(game.players[userIndex].hand.splice(cardIndex, 1)[0]);
 
-					// Find Target Player
-					for (var j = 0; j < game.players.length; j++) {
-						if (game.players[j].player + '' === targetPlayer) {
-							// Check for Card Match
-							if (game.players[j].hand[0].name === guess) {
+					// Remove Protection
+					game.players[userIndex].protected = false;
+
+					// Removed Player
+					var removedPlayer;
+
+					// Run Card Function if Needed
+					switch (power) {
+
+						// If Cards Power is 1
+						case '1':
+							if (game.players[targetIndex].hand[0].name === guess) {
 								// Remove Player from Round
-								game = gameFunctions.removeTurn(game, j, userIndex);
+								game = gameFunctions.removeTurn(game, targetIndex, userIndex);
+
+								// Set removedPlayer
+								removedPlayer = game.players[targetIndex];
 							}
-						}
-					}
-
-					// Check For Round Winner
-					var roundWin = false;
-					var round = gameFunctions.checkForRoundWin(game);
-
-					// If Tie, Set round win to true, but dont change anything.
-					if (round === 'tie') roundWin = true;
-					// If Clear Winner, Set round win and update game
-					else if (round) {
-						game = round;
-						roundWin = true;
-					}
-
-					// Check For Game Win
-					var gameWin = gameFunctions.checkForGameWin(game);
-
-					game.save(function(err, game) {
-
-						game.populate('players.player', function(err, game) {
-							// Error
-							if (err) return io.sockets.in(RoomId)
-								.emit('err', err);
-
-							// If Game Win
-							if (gameWin) return io.sockets.in(RoomId)
-								.emit('win', game, gameWin);
-
-							// If Round Win
-							if (roundWin) return io.sockets.in(RoomId)
-								.emit('roundWin', game);
-
-							// Return Game if No Win
-							return io.sockets.in(RoomId)
-								.emit('game', game);
-						});
-					});
-				});
-		});
-
-		// CARD TWO
-		socket.on('two', function(gameId, cardIndex, targetPlayer) {
-			var userId = socket.handshake.session.passport.user;
-
-			Game.findOne({
-					_id: gameId
-				})
-				.exec(function(err, game) {
-					if (err) return io.sockets.in(RoomId)
-						.emit('err', err);
-
-					for (var i = 0; i < game.players.length; i++) {
-						// Find Current Player
-						if (game.players[i].player + '' === userId) {
-							// Remove Protection
-							game.players[i].protected = false;
-
-							// Put Card in Discard
-							game.players[i].discard.push(game.players[i].hand.splice(cardIndex, 1)[0]);
-						}
-					}
-
-					// Check For Round Winner
-					var roundWin = false;
-					var round = gameFunctions.checkForRoundWin(game);
-
-					// If Tie, Set round win to true, but dont change anything.
-					if (round === 'tie') roundWin = true;
-					// If Clear Winner, Set round win and update game
-					else if (round) {
-						game = round;
-						roundWin = true;
-					}
-
-					// Check For Game Win
-					var gameWin = gameFunctions.checkForGameWin(game);
-
-					game.save(function(err, game) {
-
-						game.populate('players.player', function(err, game) {
-							// Error
-							if (err) return io.sockets.in(RoomId)
-								.emit('err', err);
-
-							// If Game Win
-							if (gameWin) return io.sockets.in(RoomId)
-								.emit('win', game, gameWin);
-
-							// If Round Win
-							if (roundWin) return io.sockets.in(RoomId)
-								.emit('roundWin', game);
-
-							// Return Game if No Win
-							return io.sockets.in(RoomId)
-								.emit('game', game);
-						});
-					});
-				});
-		});
-
-		// CARD THREE LOW
-		socket.on('threelow', function(gameId, cardIndex, targetPlayer) {
-			var userId = socket.handshake.session.passport.user;
-
-			Game.findOne({
-					_id: gameId
-				})
-				.exec(function(err, game) {
-					if (err) return io.sockets.in(RoomId)
-						.emit('err', err);
-
-					var userIndex;
-					var targetIndex;
-
-					for (var i = 0; i < game.players.length; i++) {
-						// Find Current Player
-						if (game.players[i].player + '' === userId) {
-							// Remove Protection
-							game.players[i].protected = false;
-
-							// Put Card in Discard
-							game.players[i].discard.push(game.players[i].hand.splice(cardIndex, 1)[0]);
-
-							// Save User Index
-							userIndex = i;
-						}
-
-						if (game.players[i].player + '' === targetPlayer) {
-							// Save User Index
-							targetIndex = i;
-						}
-					}
-
-					// Compare Values
-					if (game.players[userIndex].hand[0].power > game.players[targetIndex].hand[0].power)
-					// Remove Target from Round
-						game = gameFunctions.removeTurn(game, targetIndex, userIndex);
-					else if (game.players[userIndex].hand[0].power < game.players[targetIndex].hand[0].power)
-					// Remove Player from Round
-						game = gameFunctions.removeTurn(game, userIndex, userIndex);
+							break;
 
 
-					// Check For Round Winner
-					var roundWin = false;
-					var round = gameFunctions.checkForRoundWin(game);
 
-					// If Tie, Set round win to true, but dont change anything.
-					if (round === 'tie') roundWin = true;
-					// If Clear Winner, Set round win and update game
-					else if (round) {
-						game = round;
-						roundWin = true;
-					}
+							// If Cards Power is 3low
+						case '3low':
+							if (game.players[userIndex].hand[0].power > game.players[targetIndex].hand[0].power) {
+								// Remove Target from Round
+								game = gameFunctions.removeTurn(game, targetIndex, userIndex);
 
-					// Check For Game Win
-					var gameWin = gameFunctions.checkForGameWin(game);
+								// Set removedPlayer
+								removedPlayer = game.players[targetIndex];
+							} else if (game.players[userIndex].hand[0].power < game.players[targetIndex].hand[0].power) {
+								// Remove Player from Round
+								game = gameFunctions.removeTurn(game, userIndex, userIndex);
 
-					game.save(function(err, game) {
-
-						game.populate('players.player', function(err, game) {
-							// Error
-							if (err) return io.sockets.in(RoomId)
-								.emit('err', err);
-
-							// If Game Win
-							if (gameWin) return io.sockets.in(RoomId)
-								.emit('win', game, gameWin);
-
-							// If Round Win
-							if (roundWin) return io.sockets.in(RoomId)
-								.emit('roundWin', game);
-
-							// Return Game if No Win
-							return io.sockets.in(RoomId)
-								.emit('game', game);
-						});
-					});
-				});
-		});
-
-		// CARD THREE HIGH
-		socket.on('threehigh', function(gameId, cardIndex, targetPlayer) {
-			var userId = socket.handshake.session.passport.user;
-
-			Game.findOne({
-					_id: gameId
-				})
-				.exec(function(err, game) {
-					if (err) return io.sockets.in(RoomId)
-						.emit('err', err);
-
-					var userIndex;
-					var targetIndex;
-
-					for (var i = 0; i < game.players.length; i++) {
-						// Find Current Player
-						if (game.players[i].player + '' === userId) {
-							// Remove Protection
-							game.players[i].protected = false;
-
-							// Put Card in Discard
-							game.players[i].discard.push(game.players[i].hand.splice(cardIndex, 1)[0]);
-
-							// Save User Index
-							userIndex = i;
-						}
-
-						if (game.players[i].player + '' === targetPlayer) {
-							// Save User Index
-							targetIndex = i;
-						}
-					}
-
-					// Compare Values
-					if (game.players[userIndex].hand[0].power < game.players[targetIndex].hand[0].power)
-					// Remove Target from Round
-						game = gameFunctions.removeTurn(game, targetIndex, userIndex);
-					else if (game.players[userIndex].hand[0].power > game.players[targetIndex].hand[0].power)
-					// Remove Player from Round
-						game = gameFunctions.removeTurn(game, userIndex, userIndex);
+								// Set removedPlayer
+								removedPlayer = game.players[userIndex];
+							}
+							break;
 
 
-					// Check For Round Winner
-					var roundWin = false;
-					var round = gameFunctions.checkForRoundWin(game);
 
-					// If Tie, Set round win to true, but dont change anything.
-					if (round === 'tie') roundWin = true;
-					// If Clear Winner, Set round win and update game
-					else if (round) {
-						game = round;
-						roundWin = true;
-					}
+							// If Cards Power is 3high
+						case '3high':
+							if (game.players[userIndex].hand[0].power < game.players[targetIndex].hand[0].power) {
+								// Remove Target from Round
+								game = gameFunctions.removeTurn(game, targetIndex, userIndex);
 
-					// Check For Game Win
-					var gameWin = gameFunctions.checkForGameWin(game);
+								// Set removedPlayer
+								removedPlayer = game.players[targetIndex];
+							} else if (game.players[userIndex].hand[0].power > game.players[targetIndex].hand[0].power) {
+								// Remove Player from Round
+								game = gameFunctions.removeTurn(game, userIndex, userIndex);
 
-					game.save(function(err, game) {
+								// Set removedPlayer
+								removedPlayer = game.players[userIndex];
+							}
+							break;
 
-						game.populate('players.player', function(err, game) {
-							// Error
-							if (err) return io.sockets.in(RoomId)
-								.emit('err', err);
 
-							// If Game Win
-							if (gameWin) return io.sockets.in(RoomId)
-								.emit('win', game, gameWin);
 
-							// If Round Win
-							if (roundWin) return io.sockets.in(RoomId)
-								.emit('roundWin', game);
-
-							// Return Game if No Win
-							return io.sockets.in(RoomId)
-								.emit('game', game);
-						});
-					});
-				});
-		});
-
-		// CARD FOUR
-		socket.on('four', function(gameId, cardIndex, targetPlayer) {
-			var userId = socket.handshake.session.passport.user;
-
-			Game.findOne({
-					_id: gameId
-				})
-				.exec(function(err, game) {
-					if (err) return io.sockets.in(RoomId)
-						.emit('err', err);
-
-					for (var i = 0; i < game.players.length; i++) {
-						// Find Current Player
-						if (game.players[i].player + '' === userId) {
-							// Put Card in Discard
-							game.players[i].discard.push(game.players[i].hand.splice(cardIndex, 1)[0]);
-
+							// If Cards Power is 4
+						case '4':
 							// Give Player Protection
-							game.players[i].protected = true;
-						}
-					}
+							game.players[userIndex].protected = true;
+							break;
 
-					// Check For Round Winner
-					var roundWin = false;
-					var round = gameFunctions.checkForRoundWin(game);
 
-					// If Tie, Set round win to true, but dont change anything.
-					if (round === 'tie') roundWin = true;
-					// If Clear Winner, Set round win and update game
-					else if (round) {
-						game = round;
-						roundWin = true;
-					}
 
-					// Check For Game Win
-					var gameWin = gameFunctions.checkForGameWin(game);
-
-					game.save(function(err, game) {
-
-						game.populate('players.player', function(err, game) {
-							// Error
-							if (err) return io.sockets.in(RoomId)
-								.emit('err', err);
-
-							// If Game Win
-							if (gameWin) return io.sockets.in(RoomId)
-								.emit('win', game, gameWin);
-
-							// If Round Win
-							if (roundWin) return io.sockets.in(RoomId)
-								.emit('roundWin', game);
-
-							// Return Game if No Win
-							return io.sockets.in(RoomId)
-								.emit('game', game);
-						});
-					});
-				});
-		});
-
-		// CARD FIVE
-		socket.on('five', function(gameId, cardIndex, targetPlayer) {
-			var userId = socket.handshake.session.passport.user;
-
-			Game.findOne({
-					_id: gameId
-				})
-				.exec(function(err, game) {
-					if (err) return io.sockets.in(RoomId)
-						.emit('err', err);
-
-					var userIndex;
-
-					for (var i = 0; i < game.players.length; i++) {
-						// Find Current Player
-						if (game.players[i].player + '' === userId) {
-							// Remove Protection
-							game.players[i].protected = false;
-
+							// If Cards Power is 5
+						case '5':
 							// Put Card in Discard
-							game.players[i].discard.push(game.players[i].hand.splice(cardIndex, 1)[0]);
-
-							// Get User Index
-							userIndex = i;
-						}
-					}
-
-					for (var j = 0; j < game.players.length; j++) {
-						// Find Target Player
-						if (game.players[j].player + '' === targetPlayer) {
-							// Put Card in Discard
-							var card = game.players[j].discard.push(game.players[j].hand.splice(0, 1)[0]);
+							var card = game.players[targetIndex].discard.push(game.players[targetIndex].hand.splice(0, 1)[0]);
 
 							// Check For 8
-							if (card.vp === 8)
-							// Remove Target from Round
-								game = gameFunctions.removeTurn(game, j, userIndex);
+							if (card.vp === 8) {
+								// Remove Target from Round
+								game = gameFunctions.removeTurn(game, targetIndex, userIndex);
+
+								// Set removedPlayer
+								removedPlayer = game.players[targetIndex];
+							}
 
 							// Check For Empty Deck
 							else if (game.deck.length < 1)
-								game.players[i].hand.push(game.game.extraCard);
+								game.players[targetIndex].hand.push(game.game.extraCard);
 
 							else
 							// Draw a Card
-								game.players[j].hand.push(game.deck.splice(0, 1)[0]);
-						}
+								game.players[targetIndex].hand.push(game.deck.splice(0, 1)[0]);
+							break;
+
+
+
+							// If Cards Power is 6
+						case '6':
+							// Temp Card Holder
+							var cardHolder = game.players[userIndex].hand[0];
+
+							// Traid Cards
+							game.players[userIndex].hand[0] = game.players[targetIndex].hand[0];
+							game.players[targetIndex].hand[0] = cardHolder;
+							break;
+
+
+
+							// If Cards Power is 8
+						case '8':
+							// Remove Player
+							game = gameFunctions.removeTurn(game, userIndex, userIndex);
+
+							// Set removedPlayer
+							removedPlayer = game.players[targetIndex];
 					}
 
-					// Check For Round Winner
-					var roundWin = false;
-					var round = gameFunctions.checkForRoundWin(game);
-
-					// If Tie, Set round win to true, but dont change anything.
-					if (round === 'tie') roundWin = true;
-					// If Clear Winner, Set round win and update game
-					else if (round) {
-						game = round;
-						roundWin = true;
-					}
-
-					// Check For Game Win
-					var gameWin = gameFunctions.checkForGameWin(game);
-
+					// Save Game
 					game.save(function(err, game) {
 
+						// Populate Players
 						game.populate('players.player', function(err, game) {
+
 							// Error
 							if (err) return io.sockets.in(RoomId)
 								.emit('err', err);
 
-							// If Game Win
-							if (gameWin) return io.sockets.in(RoomId)
-								.emit('win', game, gameWin);
+							// If Power of Card is 2
+							if (power === '2')
+								return io.sockets.in(RoomId)
+									.emit('gameShowCard', game, targetIndex);
 
-							// If Round Win
-							if (roundWin) return io.sockets.in(RoomId)
-								.emit('roundWin', game);
+							// If Power of Card is 5
+							if (power === '5')
+								return io.sockets.in(RoomId)
+									.emit('gameDiscard', game, targetIndex);
 
-							// Return Game if No Win
+							// If Power of Card is 6
+							if (power === '6')
+								return io.sockets.in(RoomId)
+									.emit('gameSwapHands', game, targetIndex);
+
+							// If Player Has Been Removed From Round
+							if (removedPlayer)
+								return io.sockets.in(RoomId)
+									.emit('gameRemovePlayer', game, removedPlayer);
+
+							// Return Game if No Other Conditions Met
 							return io.sockets.in(RoomId)
-								.emit('game', game);
+								.emit('gamePlayedCard', game);
 						});
 					});
 				});
-		});
+		}); // End playCard
 
-		// CARD SIX
-		socket.on('six', function(gameId, cardIndex, targetPlayer) {
-			var userId = socket.handshake.session.passport.user;
-
-			Game.findOne({
-					_id: gameId
-				})
+		// NEXT TURN
+		// ============================================================
+		socket.on('nextTurn', function(gameId) {
+			Game.findById(gameId)
 				.exec(function(err, game) {
-					if (err) return io.sockets.in(RoomId)
-						.emit('err', err);
 
-					var userIndex;
-					var targetIndex;
+					// Check For Win Before Starting Next Turn
+					var roundWin = gameFunctions.checkForRoundWin(game);
+					var gameWin;
 
-					for (var i = 0; i < game.players.length; i++) {
-						// Find Current Player
-						if (game.players[i].player + '' === userId) {
-							// Remove Protection
-							game.players[i].protected = false;
-
-							// Put Card in Discard
-							game.players[i].discard.push(game.players[i].hand.splice(cardIndex, 1)[0]);
-
-							// Save User Index
-							userIndex = i;
-						}
-
-						if (game.players[i].player + '' === targetPlayer) {
-							// Save User Index
-							targetIndex = i;
-						}
+					// If there is a round win, check for a game win and set game = roundWin
+					if (roundWin !== null && roundWin !== 'tie') {
+						gameWin = gameFunctions.checkForGameWin(roundWin);
+						game = roundWin;
 					}
 
-					// Hold Card
-					var cardHolder = game.players[userIndex].hand[0];
+					// increment Turn
+					game = gameFunctions.nextTurn(game);
 
-					// Traid Cards
-					game.players[userIndex].hand[0] = game.players[targetIndex].hand[0];
-					game.players[targetIndex].hand[0] = cardHolder;
+					// Save changes
+					game.save(function() {
+						// Error
+						if (err) return io.sockets.in(RoomId)
+							.emit('err', err);
 
-
-
-					// Check For Round Winner
-					var roundWin = false;
-					var round = gameFunctions.checkForRoundWin(game);
-
-					// If Tie, Set round win to true, but dont change anything.
-					if (round === 'tie') roundWin = true;
-					// If Clear Winner, Set round win and update game
-					else if (round) {
-						game = round;
-						roundWin = true;
-					}
-
-					// Check For Game Win
-					var gameWin = gameFunctions.checkForGameWin(game);
-
-					game.save(function(err, game) {
-
+						// Populate players
 						game.populate('players.player', function(err, game) {
 							// Error
 							if (err) return io.sockets.in(RoomId)
 								.emit('err', err);
 
-							// If Game Win
-							if (gameWin) return io.sockets.in(RoomId)
-								.emit('win', game, gameWin);
+							// Game Win
+							if (gameWin)
+								return io.sockets.in(RoomId)
+									.emit('gameWin', game, gameWin);
 
-							// If Round Win
-							if (roundWin) return io.sockets.in(RoomId)
-								.emit('roundWin', game);
+							// Round Win
+							if (roundWin)
+								return io.sockets.in(RoomId)
+									.emit('gameRoundWin', game);
 
-							// Return Game if No Win
+							// Return Game
 							return io.sockets.in(RoomId)
-								.emit('game', game);
+								.emit('gameNextTurn', game);
 						});
 					});
 				});
-		});
+		}); // End nextTurn
 
-		// CARD SEVEN
-		socket.on('seven', function(gameId, cardIndex, targetPlayer) {
-			var userId = socket.handshake.session.passport.user;
-
-			Game.findOne({
-					_id: gameId
-				})
-				.exec(function(err, game) {
-					if (err) return io.sockets.in(RoomId)
-						.emit('err', err);
-
-					for (var i = 0; i < game.players.length; i++) {
-						// Find Current Player
-						if (game.players[i].player + '' === userId) {
-							// Remove Protection
-							game.players[i].protected = false;
-
-							// Put Card in Discard
-							game.players[i].discard.push(game.players[i].hand.splice(cardIndex, 1)[0]);
-						}
-					}
-
-					// Check For Round Winner
-					var roundWin = false;
-					var round = gameFunctions.checkForRoundWin(game);
-
-					// If Tie, Set round win to true, but dont change anything.
-					if (round === 'tie') roundWin = true;
-					// If Clear Winner, Set round win and update game
-					else if (round) {
-						game = round;
-						roundWin = true;
-					}
-
-					// Check For Game Win
-					var gameWin = gameFunctions.checkForGameWin(game);
-
-					game.save(function(err, game) {
-
-						game.populate('players.player', function(err, game) {
-							// Error
-							if (err) return io.sockets.in(RoomId)
-								.emit('err', err);
-
-							// If Game Win
-							if (gameWin) return io.sockets.in(RoomId)
-								.emit('win', game, gameWin);
-
-							// If Round Win
-							if (roundWin) return io.sockets.in(RoomId)
-								.emit('roundWin', game);
-
-							// Return Game if No Win
-							return io.sockets.in(RoomId)
-								.emit('game', game);
-						});
-					});
-				});
-		});
-
-		// CARD EIGHT
-		socket.on('eight', function(gameId, cardIndex, targetPlayer) {
-			var userId = socket.handshake.session.passport.user;
-
-			Game.findOne({
-					_id: gameId
-				})
-				.exec(function(err, game) {
-					if (err) return io.sockets.in(RoomId)
-						.emit('err', err);
-
-					for (var i = 0; i < game.players.length; i++) {
-						// Find Current Player
-						if (game.players[i].player + '' === userId) {
-							// Remove Protection
-							game.players[i].protected = false;
-
-							// Put Card in Discard
-							game.players[i].discard.push(game.players[i].hand.splice(cardIndex, 1)[0]);
-
-							game = gameFunctions.removeTurn(game, i, i);
-						}
-					}
-
-					// Check For Round Winner
-					var roundWin = false;
-					var round = gameFunctions.checkForRoundWin(game);
-
-					// If Tie, Set round win to true, but dont change anything.
-					if (round === 'tie') roundWin = true;
-					// If Clear Winner, Set round win and update game
-					else if (round) {
-						game = round;
-						roundWin = true;
-					}
-
-					// Check For Game Win
-					var gameWin = gameFunctions.checkForGameWin(game);
-
-					game.save(function(err, game) {
-
-						game.populate('players.player', function(err, game) {
-							// Error
-							if (err) return io.sockets.in(RoomId)
-								.emit('err', err);
-
-							// If Game Win
-							if (gameWin) return io.sockets.in(RoomId)
-								.emit('win', game, gameWin);
-
-							// If Round Win
-							if (roundWin) return io.sockets.in(RoomId)
-								.emit('roundWin', game);
-
-							// Return Game if No Win
-							return io.sockets.in(RoomId)
-								.emit('game', game);
-						});
-					});
-				});
-		});
-	});
-};
+	}); // End io.sockets.on
+}; // End module.exports

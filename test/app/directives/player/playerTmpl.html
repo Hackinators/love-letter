@@ -1,0 +1,11 @@
+{{player.player.name.full}}
+<div ng-repeat="card in player.hand">
+  <card-dir socket="socket"
+            card="card">
+  </card-dir>
+</div>
+<div ng-repeat="card in player.discard">
+  <card-dir socket="socket"
+            card="card">
+  </card-dir>
+</div>

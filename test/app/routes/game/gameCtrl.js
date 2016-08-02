@@ -65,4 +65,10 @@ angular.module("app")
 			return false;
 		};
 
+		$scope.playerFilter = function(player) {
+			if (player.player._id === user._id) {
+				return player;
+			}
+			return false;
+		};
 	});

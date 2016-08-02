@@ -1,10 +1,19 @@
 <nav-dir></nav-dir>
-<chatbox-dir socket="socket", username="user.username"></chatbox-dir>
+<chatbox socket="socket" , username="user.username"></chatbox>
 
-<div class="opponents" ng-repeat="player in game.players | filter: opponentFilter">
-  {{player.player.name.full}}
-</div>
+<div class="game">
 
-<div class="player">
-  
+    <div class="opponents">
+      opponents
+      <div ng-repeat="player in game.players | filter: opponentFilter">
+          <opponent></opponent>
+      </div>
+    </div>
+
+    <div class="player">
+      player
+      <div class="player" ng-repeat="player in game.players | filter: playerFilter">
+          <player></player>
+      </div>
+    </div>
 </div>
