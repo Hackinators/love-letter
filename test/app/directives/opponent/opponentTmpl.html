@@ -1,11 +1,13 @@
-{{player.player.name.full}}
-<div ng-repeat="card in player.hand">
-  <card-dir socket="socket"
-            card="card">
-  </card-dir>
-</div>
-<div ng-repeat="card in player.discard">
-  <card-dir socket="socket"
-            card="card">
-  </card-dir>
+<div>
+  {{player.player.name.full}}
+  <br> <span style="background:blue">Hand</span>
+  <div ng-repeat="card in player.hand">
+    <card-dir socket="socket" card="card" game="game">
+    </card-dir>
+  </div>
+  <br> <span style="background: red">Discard</span>
+  <div ng-repeat="card in player.discard">
+    <card-dir socket="socket" card="card" game="game">
+    </card-dir>
+  </div>
 </div>

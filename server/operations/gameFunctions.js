@@ -28,7 +28,7 @@ module.exports = {
 	},
 
 	shuffleCards: function(theme) {
-		var deck = decks[theme].map(function(item) {
+		var deck = decks[theme].deck.map(function(item) {
 			return item;
 		});
 
@@ -82,12 +82,14 @@ module.exports = {
 		});
 		game.round++;
 		game.extraCard = null;
+		game.roundStart = true;
 
 		// Choose who starts the next round based on round winner
 		for (var i = 0; i < game.players.length; i++) {
 			// Clear Hand
 			game.players[i].hand = [];
 			game.players[i].deck = [];
+			game.players[i].ready = [];
 
 			// Find Round Winner
 			if (game.roundWinner === game.players[i].player) {
@@ -224,10 +226,11 @@ module.exports = {
 		game.turnOrder = game.constTurnOrder;
 
 		game.deck = this.shuffleCards(theme);
+		game.cardNames = decks[theme].cardNames.map(function(item) {
+			return item;
+		});
 
 		game.theme = theme;
-
-		game = this.dealCards(game);
 
 		return game;
 	}

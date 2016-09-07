@@ -1,0 +1,12 @@
+<div class="confirm">
+  <form class="overlay">
+    <h3 style="text-align: left; margin: 0px">Confirm</h3>
+    <br />
+    {{text}}
+    <br />
+    <br />
+    <button type="button" ng-click="close(true)">Yes</button>
+    <button type="button" ng-click="close(false)" focus-on="focusMe">No</button>
+  </form>
+  <div class="fade" ng-click="close()"></div>
+</div>

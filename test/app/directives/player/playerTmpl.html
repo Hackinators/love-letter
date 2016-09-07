@@ -1,11 +1,14 @@
-{{player.player.name.full}}
-<div ng-repeat="card in player.hand">
-  <card-dir socket="socket"
-            card="card">
+{{player.player.name.full}} {{player.ready}}
+<br> <span style="background:blue">Hand</span>
+<div ng-repeat="card in player.hand track by $index">
+  <card-dir socket="socket" card="card" game="game">
   </card-dir>
+  <div class="playButton">
+    <button type="button" name="button" ng-click="playCard(card, $index)" ng-show="game.players[game.turnOrder[game.currentTurn]].player._id===user._id">Play Card</button>
+  </div>
 </div>
+<br> <span style="background: red">Discard</span>
 <div ng-repeat="card in player.discard">
-  <card-dir socket="socket"
-            card="card">
+  <card-dir socket="socket" card="card" game="game">
   </card-dir>
 </div>

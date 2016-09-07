@@ -5,10 +5,11 @@ angular.module("app")
 		return {
 			restrict: 'EA',
 			templateUrl: './app/directives/card/cardTmpl.html',
-			controller: 'cardCtrl',
-			scope: {
-				socket: '=',
-				card: '=',
-			}
+			// controller: 'cardCtrl',
+			// scope: {
+			// 	socket: '=',
+			// 	card: '=',
+			// 	game: '='
+			// }
 		};
 	});

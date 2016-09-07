@@ -1,19 +1,25 @@
 <nav-dir></nav-dir>
 <chatbox socket="socket" , username="user.username"></chatbox>
 
+current Player = {{game.players[game.turnOrder[game.currentTurn]].player.name.full}}={{user.name.full}}
+
 <div class="game">
 
-    <div class="opponents">
-      opponents
-      <div ng-repeat="player in game.players | filter: opponentFilter">
-          <opponent></opponent>
-      </div>
+  <div class="opponents">
+    opponents
+    <br>
+    <div ng-repeat="player in game.players | filter: opponentFilter" class="opponentHand">
+      <opponent></opponent>
     </div>
+  </div>
 
-    <div class="player">
-      player
-      <div class="player" ng-repeat="player in game.players | filter: playerFilter">
-          <player></player>
-      </div>
+  <br><br>
+
+  <div class="player">
+    player
+    <br>
+    <div class="player" ng-repeat="player in game.players | filter: playerFilter">
+      <player></player>
     </div>
+  </div>
 </div>

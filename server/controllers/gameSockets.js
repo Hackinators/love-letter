@@ -68,6 +68,32 @@ module.exports = function(io) {
 			});
 		}); // End create
 
+		// PLAYER READY
+		socket.on('playerReady', function(gameId, index) {
+			Game.findById(gameId, function(err, game) {
+				if (err) return io.sockets.in(RoomId)
+					.emit('err', err);
+
+				game.players[index].ready = true;
+
+				game.save(function(err, game) {
+					if (err) return io.sockets.in(RoomId)
+						.emit('err', err);
+
+					// Populate players
+					game.populate('players.player', function(err, game) {
+						// Error
+						if (err) return io.sockets.in(RoomId)
+							.emit('err', err);
+
+						// Return Game if No Win
+						return io.sockets.in(RoomId)
+							.emit('playerReady', game);
+					});
+				});
+			});
+		});
+
 		// NEW ROUND
 		socket.on('newRound', function(gameId) {
 			Game.findById(gameId, function(err, game) {
@@ -129,6 +155,9 @@ module.exports = function(io) {
 		// PLAY CARD
 		// ============================================================
 		socket.on('playCard', function(gameId, cardIndex, targetPlayer, guess) {
+
+			console.log('playing card');
+
 			Game.findById(gameId)
 				.exec(function(err, game) {
 					if (err) return io.sockets.in(RoomId)
@@ -141,6 +170,9 @@ module.exports = function(io) {
 					// Get Target Player If One Exists
 					if (targetPlayer)
 						targetIndex = gameFunctions.getTargetIndex(game, targetPlayer);
+
+					console.log('user: ', userIndex, "target: ", targetIndex);
+
 
 					// Put Card in Players Discard and Get Power
 					var power = game.players[userIndex].hand[cardIndex].testPower;
@@ -308,11 +340,11 @@ module.exports = function(io) {
 
 					// Check For Win Before Starting Next Turn
 					var roundWin = gameFunctions.checkForRoundWin(game);
-					var gameWin;
+					var winner;
 
 					// If there is a round win, check for a game win and set game = roundWin
 					if (roundWin !== null && roundWin !== 'tie') {
-						gameWin = gameFunctions.checkForGameWin(roundWin);
+						winner = gameFunctions.checkForGameWin(roundWin);
 						game = roundWin;
 					}
 
@@ -332,9 +364,9 @@ module.exports = function(io) {
 								.emit('err', err);
 
 							// Game Win
-							if (gameWin)
+							if (winner)
 								return io.sockets.in(RoomId)
-									.emit('gameWin', game, gameWin);
+									.emit('gameWin', game, winner);
 
 							// Round Win
 							if (roundWin)
